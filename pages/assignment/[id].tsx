@@ -30,15 +30,31 @@ export default function Page() {
         const usersCollection = collection(db, "users");
         const q = query(usersCollection, where("email", "==", user.email));
         const querySnap = await getDocs(q);
+
+        // Check if any documents were found
+        if (querySnap.empty) {
+            console.error("No user found with email:", user.email);
+            // Handle the case where the user document doesn't exist
+            // Maybe redirect or show an error message
+            await router.push("/"); // Example: redirect home
+            return; // Exit the function early
+        }
+
         const userData = querySnap.docs[0].data();
         let found = false;
 
-        userData.assignments.forEach((assignment: any) => {
-            if (router.query.id === hash(assignment.assignment_name)) {
-                setAssignmentData(assignment);
-                found = true;
-            }
-        });
+        // Ensure userData.assignments exists before iterating
+        if (userData.assignments && Array.isArray(userData.assignments)) {
+            userData.assignments.forEach((assignment: any) => {
+                if (router.query.id === hash(assignment.assignment_name)) {
+                    setAssignmentData(assignment);
+                    found = true;
+                }
+            });
+        } else {
+            console.error("User data does not contain an assignments array:", userData);
+            // Handle missing assignments array if necessary
+        }
 
         if (!found) {
             await router.push("/");
@@ -81,7 +97,7 @@ export default function Page() {
         }
 
         try {
-            const response = await fetch(`${BACKEND_URL}/grade-submission`, {
+            const response = await fetch(`${BACKEND_URL}/grading/grade-submission`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
